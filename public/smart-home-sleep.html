@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Smart Sleep Environment</title>
+<style>
+  :root { --bg: #0f172a; --card: #1e293b; --border: #334155; --text: #e2e8f0; --muted: #94a3b8; --dim: #64748b; --accent: #6366f1; --accent2: #a5b4fc; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+  .header { background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e293b 100%); padding: 24px 20px 18px; border-bottom: 1px solid var(--border); }
+  .header-inner { max-width: 920px; margin: 0 auto; }
+  .header h1 { font-size: 20px; font-weight: 700; color: #f8fafc; display: flex; align-items: center; gap: 10px; }
+  .header p { font-size: 13px; color: var(--accent2); margin-top: 4px; }
+
+  .container { max-width: 920px; margin: 0 auto; padding: 16px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 16px 0 20px; }
+
+  .card { background: var(--card); border-radius: 14px; padding: 18px; border: 1px solid var(--border); }
+  .card h2 { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+
+  .stat-card { background: var(--card); border-radius: 12px; padding: 12px 14px; border: 1px solid var(--border); text-align: center; }
+  .stat-card .icon { font-size: 22px; margin-bottom: 2px; }
+  .stat-card .label { font-size: 10px; color: var(--dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-card .value { font-size: 18px; font-weight: 700; color: #f8fafc; margin: 2px 0; }
+  .stat-card .sub { font-size: 10px; color: var(--muted); }
+
+  /* Slider */
+  .slider-group { margin-bottom: 14px; }
+  .slider-header { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .slider-label { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .slider-value { font-size: 12px; color: var(--text); font-weight: 600; }
+  input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 3px; background: #334155; outline: none; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid #818cf8; }
+  input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid #818cf8; }
+
+  /* Checkbox */
+  .override-box { margin-top: 10px; padding: 10px 12px; background: var(--bg); border-radius: 10px; }
+  .override-box label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; color: var(--accent2); font-weight: 500; }
+  .override-box input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
+
+  /* Need indicator */
+  .need-bar { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 10px; }
+  .need-dot { width: 10px; height: 10px; border-radius: 99px; flex-shrink: 0; }
+  .need-label { font-size: 13px; font-weight: 600; }
+  .need-score { font-size: 12px; color: var(--muted); margin-left: auto; }
+
+  /* Charts (canvas) */
+  .chart-wrap { position: relative; width: 100%; }
+  canvas { width: 100% !important; height: auto !important; display: block; }
+
+  /* Timeline table */
+  .timeline-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .timeline-table th { padding: 7px 8px; text-align: left; font-size: 10px; color: var(--dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+  .timeline-table td { padding: 7px 8px; border-bottom: 1px solid #1e293b20; }
+  .timeline-table .time-cell { font-weight: 600; color: #f8fafc; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .timeline-table .action-cell { color: #cbd5e1; font-size: 11px; }
+  .sleep-row { background: #0f172a; }
+
+  .phase-badge { font-size: 9px; font-weight: 600; padding: 2px 7px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; display: inline-block; }
+  .bar-cell { display: flex; align-items: center; gap: 5px; }
+  .bar-fill { width: 22px; height: 7px; border-radius: 3px; border: 1px solid var(--border); }
+
+  /* Insight grid */
+  .insight-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .insight { padding: 11px 13px; background: var(--bg); border-radius: 10px; border: 1px solid #1e293b; }
+  .insight .title { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .insight .stat { font-size: 14px; font-weight: 700; color: var(--accent2); margin-bottom: 3px; }
+  .insight .detail { font-size: 10px; color: var(--dim); line-height: 1.4; }
+
+  .footer { text-align: center; padding: 12px 0 24px; color: #475569; font-size: 10px; }
+
+  /* ── Mobile ── */
+  @media (max-width: 700px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .grid-4 { grid-template-columns: 1fr 1fr; }
+    .insight-grid { grid-template-columns: 1fr; }
+    .header h1 { font-size: 18px; }
+    .timeline-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .timeline-table { min-width: 580px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <h1>&#127769; Smart Sleep Environment</h1>
+    <p>Personalized lighting, temperature &amp; blinds automation powered by your Whoop data</p>
+  </div>
+</div>
+
+<div class="container">
+  <!-- Inputs -->
+  <div class="grid-2" id="inputSection">
+    <div class="card">
+      <h2>Today's Metrics</h2>
+      <div class="slider-group"><div class="slider-header"><span class="slider-label">Previous Night's Sleep Score</span><span class="slider-value" id="vSleep">75%</span></div><input type="range" id="sSleep" min="0" max="100" value="75"></div>
+      <div class="slider-group"><div class="slider-header"><span class="slider-label">Recovery Score</span><span class="slider-value" id="vRecovery">56%</span></div><input type="range" id="sRecovery" min="0" max="100" value="56"></div>
+      <div class="slider-group"><div class="slider-header"><span class="slider-label">Day Strain</span><span class="slider-value" id="vStrain">8.0</span></div><input type="range" id="sStrain" min="0" max="21" step="0.5" value="8"></div>
+      <div class="slider-group"><div class="slider-header"><span class="slider-label">Stress Score</span><span class="slider-value" id="vStress">40%</span></div><input type="range" id="sStress" min="0" max="100" value="40"></div>
+    </div>
+    <div class="card">
+      <h2>Sleep Times</h2>
+      <div class="slider-group"><div class="slider-header"><span class="slider-label">Previous Sleep Onset</span><span class="slider-value" id="vPSO">1:00 AM</span></div><input type="range" id="sPSO" min="-2" max="12" step="0.25" value="1"></div>
+      <div class="slider-group"><div class="slider-header"><span class="slider-label">Previous Wake Time</span><span class="slider-value" id="vPW">8:30 AM</span></div><input type="range" id="sPW" min="-2" max="12" step="0.25" value="8.5"></div>
+      <div class="slider-group"><div class="slider-header"><span class="slider-label">Recommended Sleep Onset</span><span class="slider-value" id="vRSO">12:00 AM</span></div><input type="range" id="sRSO" min="-2" max="12" step="0.25" value="0"></div>
+      <div class="slider-group"><div class="slider-header"><span class="slider-label">Recommended Wake Time</span><span class="slider-value" id="vRW">8:00 AM</span></div><input type="range" id="sRW" min="-2" max="12" step="0.25" value="8"></div>
+      <div class="override-box">
+        <label><input type="checkbox" id="cbOverride"> Override: I need to wake up at a specific time</label>
+        <div id="customWakeWrap" style="display:none;margin-top:10px;">
+          <div class="slider-group"><div class="slider-header"><span class="slider-label">Custom Wake Time</span><span class="slider-value" id="vCW">7:00 AM</span></div><input type="range" id="sCW" min="-2" max="12" step="0.25" value="7"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Need Score -->
+  <div class="need-bar" id="needBar"></div>
+
+  <!-- Summary Cards -->
+  <div class="grid-4" id="summaryCards"></div>
+
+  <!-- Charts -->
+  <div class="card" style="margin-bottom:16px">
+    <h2>Lighting &amp; Blinds Timeline</h2>
+    <div class="chart-wrap"><canvas id="chartLB" height="180"></canvas></div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <h2>Temperature Timeline</h2>
+    <div class="chart-wrap"><canvas id="chartTemp" height="160"></canvas></div>
+  </div>
+
+  <!-- Timeline Table -->
+  <div class="card" style="margin-bottom:16px">
+    <h2>Full Automation Schedule</h2>
+    <div class="timeline-scroll"><table class="timeline-table" id="timelineTable"></table></div>
+  </div>
+
+  <!-- Insights -->
+  <div class="card" style="margin-bottom:20px">
+    <h2>Model Insights (from your Whoop data)</h2>
+    <div class="insight-grid">
+      <div class="insight"><div class="title">Sleep Before 12:30 AM</div><div class="stat">72% avg recovery</div><div class="detail">vs 44% when sleeping after 2 AM. Earlier sleep onset is your strongest recovery lever.</div></div>
+      <div class="insight"><div class="title">7.5+ Hours Sleep</div><div class="stat">74–81% avg recovery</div><div class="detail">Under 5 hours drops to 21% recovery. Your body needs 9.4 hrs (Whoop baseline).</div></div>
+      <div class="insight"><div class="title">90+ Min Deep Sleep</div><div class="stat">69% avg recovery</div><div class="detail">vs 19% with &lt;60 min deep sleep. Cold room temps help maximize deep sleep.</div></div>
+      <div class="insight"><div class="title">Lower Skin Temp</div><div class="stat">57% recovery at &lt;33.8°C</div><div class="detail">vs 52% at &gt;34.3°C. Cooler rooms improve thermoregulation during sleep.</div></div>
+      <div class="insight"><div class="title">HRV &gt; 75ms</div><div class="stat">72% avg recovery</div><div class="detail">Your avg HRV is 71.9ms. Consistent sleep timing and cool temps boost HRV.</div></div>
+      <div class="insight"><div class="title">Sleep Consistency 80%+</div><div class="stat">75% avg recovery</div><div class="detail">Your avg consistency is 58%. Same bed/wake times dramatically help.</div></div>
+    </div>
+  </div>
+
+  <div class="footer">Model built from 282 days of Whoop data (May 2025 – Apr 2026) · Baseline temp: 72°F · Wind-down: 60 min · Blind opening: 30 min</div>
+</div>
+
+<script>
+// ── Utilities ──
+function clamp(v,mn,mx){return Math.max(mn,Math.min(mx,v))}
+function lerp(a,b,t){return a+(b-a)*clamp(t,0,1)}
+function fmtTime(h){
+  var m=Math.round(h*60); var hh=Math.floor(m/60)%24; if(hh<0)hh+=24;
+  var mm=Math.abs(m%60); var ap=hh>=12?"PM":"AM"; var h12=hh===0?12:hh>12?hh-12:hh;
+  return h12+":"+String(mm).padStart(2,"0")+" "+ap;
+}
+
+var BASELINE_TEMP=72, WINDDOWN_MIN=60, BLIND_MIN=30;
+
+// ── Compute Model ──
+function compute(){
+  var ss=+el("sSleep").value, rc=+el("sRecovery").value, st=+el("sStrain").value, sx=+el("sStress").value;
+  var rso=+el("sRSO").value, rw=+el("sRW").value;
+  var useCustom=el("cbOverride").checked, cw=+el("sCW").value;
+  var effectiveWake=useCustom?cw:rw, effectiveSleep=rso;
+
+  var need=0;
+  need+=rc<34?35:rc<67?20:5;
+  need+=st>=14?25:st>=8?15:5;
+  need+=ss<50?25:ss<70?15:5;
+  need+=sx>=70?15:sx>=40?8:0;
+  need=clamp(need,0,100);
+
+  var tSleep=Math.round(lerp(69,64,need/100));
+  var tDeep=tSleep-1;
+  var tWake=Math.round(lerp(70,68,need/100));
+  var extra=need>60?0.25:0;
+  var wdStart=effectiveSleep-(WINDDOWN_MIN/60)-extra;
+  var blindStart=effectiveWake-(BLIND_MIN/60);
+  var dur=(effectiveWake-effectiveSleep+24)%24;
+
+  // Build timeline
+  var tl=[];
+  function add(t,l,tp,b,label,phase){tl.push({time:t,light:Math.round(l),temp:Math.round(tp*10)/10,blinds:Math.round(b),label:label,phase:phase})}
+
+  add(wdStart-2,100,BASELINE_TEMP,0,"Evening routine","evening");
+  add(wdStart-0.5,100,lerp(BASELINE_TEMP,tSleep,0.3),0,"Room cooling begins","pre-winddown");
+
+  var wdDur=effectiveSleep-wdStart;
+  for(var i=0;i<=5;i++){
+    var t=i/5, tm=wdStart+t*wdDur;
+    var li=Math.round(100*Math.pow(1-t,2.2));
+    var tp=lerp(lerp(BASELINE_TEMP,tSleep,0.3),tSleep,t);
+    if(i===0)add(tm,li,tp,0,"Wind-down begins — lights dimming","winddown");
+    else if(i===5)add(tm,0,tSleep,0,"Lights off — sleep onset","sleep");
+    else add(tm,li,tp,0,"Lights at "+li+"%",t<0.5?"winddown-early":"winddown-late");
+  }
+
+  add(effectiveSleep+0.25,0,tDeep,0,"Deep sleep — coldest temp","deep-sleep");
+  add(effectiveSleep+1.5,0,tDeep,0,"Deep sleep window","deep-sleep");
+  add(effectiveSleep+3,0,tSleep,0,"Mid-sleep — temp stabilizes","sleep");
+  add(effectiveWake-2,0,lerp(tSleep,tWake,0.3),0,"REM sleep window","rem-sleep");
+  add(blindStart,0,lerp(tSleep,tWake,0.5),5,"Blinds begin opening","waking");
+  for(var j=1;j<=4;j++){
+    var t2=j/4, tm2=blindStart+t2*(BLIND_MIN/60);
+    var bp=Math.round(t2*100), tp2=lerp(lerp(tSleep,tWake,0.5),tWake,t2);
+    if(j===4)add(tm2,0,tWake,100,"Blinds fully open — wake time","wake");
+    else add(tm2,0,tp2,bp,"Blinds at "+bp+"%","waking");
+  }
+  add(effectiveWake+0.25,100,BASELINE_TEMP,100,"Room lights on — day begins","day");
+
+  tl.sort(function(a,b){return (a.time<12?a.time+24:a.time)-(b.time<12?b.time+24:b.time)});
+
+  return {tl:tl, need:need, tSleep:tSleep, tDeep:tDeep, tWake:tWake, wdStart:wdStart, blindStart:blindStart, effectiveSleep:effectiveSleep, effectiveWake:effectiveWake, dur:dur, extra:extra};
+}
+
+// ── DOM helpers ──
+function el(id){return document.getElementById(id)}
+
+// ── Phase colors ──
+var phaseColors={
+  "evening":{bg:"#fef3c7",fg:"#92400e"},"pre-winddown":{bg:"#fde68a",fg:"#78350f"},
+  "winddown":{bg:"#c4b5fd",fg:"#4c1d95"},"winddown-early":{bg:"#c4b5fd",fg:"#4c1d95"},
+  "winddown-late":{bg:"#a78bfa",fg:"#3b0764"},"sleep":{bg:"#1e293b",fg:"#94a3b8"},
+  "deep-sleep":{bg:"#0f172a",fg:"#6366f1"},"rem-sleep":{bg:"#1e1b4b",fg:"#818cf8"},
+  "waking":{bg:"#fef9c3",fg:"#854d0e"},"wake":{bg:"#fef08a",fg:"#713f12"},
+  "day":{bg:"#fde047",fg:"#422006"}
+};
+
+// ── Draw charts ──
+function drawLBChart(data){
+  var c=el("chartLB"), ctx=c.getContext("2d");
+  var dpr=window.devicePixelRatio||1;
+  var w=c.parentElement.clientWidth, h=180;
+  c.width=w*dpr; c.height=h*dpr; c.style.width=w+"px"; c.style.height=h+"px";
+  ctx.scale(dpr,dpr);
+  var pad={l:40,r:16,t:10,b:30}, cw=w-pad.l-pad.r, ch=h-pad.t-pad.b;
+
+  ctx.clearRect(0,0,w,h);
+
+  // Grid
+  ctx.strokeStyle="#1e293b"; ctx.lineWidth=1;
+  for(var g=0;g<=4;g++){
+    var y=pad.t+ch-g*(ch/4);
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke();
+    ctx.fillStyle="#64748b"; ctx.font="10px sans-serif"; ctx.textAlign="right";
+    ctx.fillText(g*25+"%",pad.l-6,y+3);
+  }
+
+  var n=data.length;
+  function xPos(i){return pad.l+i*(cw/(n-1))}
+  function yPos(v){return pad.t+ch-v*(ch/100)}
+
+  // Light area
+  ctx.beginPath(); ctx.moveTo(xPos(0),yPos(0));
+  for(var i=0;i<n;i++){
+    if(i>0){ctx.lineTo(xPos(i),yPos(data[i-1].light))} // step
+    ctx.lineTo(xPos(i),yPos(data[i].light));
+  }
+  ctx.lineTo(xPos(n-1),yPos(0)); ctx.closePath();
+  ctx.fillStyle="rgba(251,191,36,0.15)"; ctx.fill();
+  ctx.beginPath();
+  for(var i=0;i<n;i++){
+    if(i>0){ctx.lineTo(xPos(i),yPos(data[i-1].light))}
+    ctx.lineTo(xPos(i),yPos(data[i].light));
+  }
+  ctx.strokeStyle="#fbbf24"; ctx.lineWidth=2; ctx.stroke();
+
+  // Blinds area
+  ctx.beginPath(); ctx.moveTo(xPos(0),yPos(0));
+  for(var i=0;i<n;i++){
+    if(i>0){ctx.lineTo(xPos(i),yPos(data[i-1].blinds))}
+    ctx.lineTo(xPos(i),yPos(data[i].blinds));
+  }
+  ctx.lineTo(xPos(n-1),yPos(0)); ctx.closePath();
+  ctx.fillStyle="rgba(56,189,248,0.15)"; ctx.fill();
+  ctx.beginPath();
+  for(var i=0;i<n;i++){
+    if(i>0){ctx.lineTo(xPos(i),yPos(data[i-1].blinds))}
+    ctx.lineTo(xPos(i),yPos(data[i].blinds));
+  }
+  ctx.strokeStyle="#38bdf8"; ctx.lineWidth=2; ctx.stroke();
+
+  // X labels
+  ctx.fillStyle="#64748b"; ctx.font="10px sans-serif"; ctx.textAlign="center";
+  var step=Math.max(1,Math.floor(n/6));
+  for(var i=0;i<n;i+=step){
+    ctx.fillText(fmtTime(data[i].time),xPos(i),h-6);
+  }
+  if((n-1)%step!==0) ctx.fillText(fmtTime(data[n-1].time),xPos(n-1),h-6);
+
+  // Legend
+  ctx.fillStyle="#fbbf24"; ctx.fillRect(pad.l,2,10,3);
+  ctx.fillStyle="#94a3b8"; ctx.font="10px sans-serif"; ctx.textAlign="left"; ctx.fillText("Light %",pad.l+14,8);
+  ctx.fillStyle="#38bdf8"; ctx.fillRect(pad.l+70,2,10,3);
+  ctx.fillStyle="#94a3b8"; ctx.fillText("Blinds %",pad.l+84,8);
+}
+
+function drawTempChart(data){
+  var c=el("chartTemp"), ctx=c.getContext("2d");
+  var dpr=window.devicePixelRatio||1;
+  var w=c.parentElement.clientWidth, h=160;
+  c.width=w*dpr; c.height=h*dpr; c.style.width=w+"px"; c.style.height=h+"px";
+  ctx.scale(dpr,dpr);
+  var pad={l:40,r:16,t:10,b:30}, cw=w-pad.l-pad.r, ch=h-pad.t-pad.b;
+  var tMin=60, tMax=75;
+
+  ctx.clearRect(0,0,w,h);
+
+  function yPos(v){return pad.t+ch-(v-tMin)*(ch/(tMax-tMin))}
+  var n=data.length;
+  function xPos(i){return pad.l+i*(cw/(n-1))}
+
+  // Grid + labels
+  ctx.strokeStyle="#1e293b"; ctx.lineWidth=1;
+  for(var g=tMin;g<=tMax;g+=3){
+    var y=yPos(g);
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke();
+    ctx.fillStyle="#64748b"; ctx.font="10px sans-serif"; ctx.textAlign="right";
+    ctx.fillText(g+"°",pad.l-6,y+3);
+  }
+
+  // Baseline reference
+  var by=yPos(BASELINE_TEMP);
+  ctx.setLineDash([4,4]); ctx.strokeStyle="#475569"; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(pad.l,by); ctx.lineTo(w-pad.r,by); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle="#475569"; ctx.font="10px sans-serif"; ctx.textAlign="left";
+  ctx.fillText("Baseline",w-pad.r-45,by-5);
+
+  // Line
+  ctx.beginPath();
+  for(var i=0;i<n;i++){
+    if(i===0)ctx.moveTo(xPos(i),yPos(data[i].temp));
+    else ctx.lineTo(xPos(i),yPos(data[i].temp));
+  }
+  ctx.strokeStyle="#f472b6"; ctx.lineWidth=2.5; ctx.stroke();
+
+  // Dots
+  for(var i=0;i<n;i++){
+    ctx.beginPath(); ctx.arc(xPos(i),yPos(data[i].temp),3,0,Math.PI*2);
+    ctx.fillStyle="#f472b6"; ctx.fill();
+  }
+
+  // X labels
+  ctx.fillStyle="#64748b"; ctx.font="10px sans-serif"; ctx.textAlign="center";
+  var step=Math.max(1,Math.floor(n/6));
+  for(var i=0;i<n;i+=step) ctx.fillText(fmtTime(data[i].time),xPos(i),h-6);
+  if((n-1)%step!==0) ctx.fillText(fmtTime(data[n-1].time),xPos(n-1),h-6);
+}
+
+// ── Render ──
+function render(){
+  // Update slider displays
+  el("vSleep").textContent=el("sSleep").value+"%";
+  el("vRecovery").textContent=el("sRecovery").value+"%";
+  el("vStrain").textContent=(+el("sStrain").value).toFixed(1);
+  el("vStress").textContent=el("sStress").value+"%";
+  el("vPSO").textContent=fmtTime(+el("sPSO").value<0?+el("sPSO").value+24:+el("sPSO").value);
+  el("vPW").textContent=fmtTime(+el("sPW").value<0?+el("sPW").value+24:+el("sPW").value);
+  el("vRSO").textContent=fmtTime(+el("sRSO").value<0?+el("sRSO").value+24:+el("sRSO").value);
+  el("vRW").textContent=fmtTime(+el("sRW").value<0?+el("sRW").value+24:+el("sRW").value);
+  el("vCW").textContent=fmtTime(+el("sCW").value<0?+el("sCW").value+24:+el("sCW").value);
+  el("customWakeWrap").style.display=el("cbOverride").checked?"block":"none";
+
+  var r=compute();
+
+  // Need bar
+  var nc=r.need>=60?"#ef4444":r.need>=35?"#f59e0b":"#22c55e";
+  var nl=r.need>=60?"High Recovery Need":r.need>=35?"Moderate Need":"Low Need";
+  el("needBar").style.backgroundColor=nc+"15";
+  el("needBar").style.border="1px solid "+nc+"30";
+  el("needBar").innerHTML='<div class="need-dot" style="background:'+nc+'"></div><span class="need-label" style="color:'+nc+'">'+nl+'</span><span class="need-score">Score: '+r.need+'/100</span>';
+
+  // Summary cards
+  var totalWD=WINDDOWN_MIN+(r.need>60?15:0);
+  el("summaryCards").innerHTML=[
+    {i:"&#x1F321;&#xFE0F;",l:"Sleep Temp",v:r.tSleep+"°F",s:"Deep sleep: "+r.tDeep+"°F"},
+    {i:"&#x1F4A1;",l:"Wind-down",v:fmtTime(r.wdStart),s:totalWD+" min before bed"},
+    {i:"&#x1FA9F;",l:"Blinds Open",v:fmtTime(r.blindStart),s:"30 min gradual open"},
+    {i:"&#x23F1;&#xFE0F;",l:"Sleep Duration",v:r.dur.toFixed(1)+" hrs",s:fmtTime(r.effectiveSleep)+" → "+fmtTime(r.effectiveWake)}
+  ].map(function(c){return '<div class="stat-card"><div class="icon">'+c.i+'</div><div class="label">'+c.l+'</div><div class="value">'+c.v+'</div><div class="sub">'+c.s+'</div></div>'}).join("");
+
+  // Charts
+  drawLBChart(r.tl);
+  drawTempChart(r.tl);
+
+  // Timeline table
+  var html='<thead><tr><th>Time</th><th>Phase</th><th>Lights</th><th>Temp</th><th>Blinds</th><th>Action</th></tr></thead><tbody>';
+  r.tl.forEach(function(row){
+    var pc=phaseColors[row.phase]||{bg:"#334155",fg:"#e2e8f0"};
+    var isSleep=row.phase==="sleep"||row.phase==="deep-sleep"||row.phase==="rem-sleep";
+    var tempColor=row.temp<=r.tDeep?"#6366f1":row.temp>=BASELINE_TEMP?"#f59e0b":"#94a3b8";
+    html+='<tr class="'+(isSleep?"sleep-row":"")+'">';
+    html+='<td class="time-cell">'+fmtTime(row.time)+'</td>';
+    html+='<td><span class="phase-badge" style="background:'+pc.bg+';color:'+pc.fg+'">'+row.phase.replace(/-/g," ")+'</span></td>';
+    html+='<td><div class="bar-cell"><div class="bar-fill" style="background:rgba(251,191,36,'+(row.light/100)+')"></div><span style="color:'+(row.light>0?"#fbbf24":"#475569")+'">'+row.light+'%</span></div></td>';
+    html+='<td style="color:'+tempColor+'">'+row.temp+'°F</td>';
+    html+='<td><div class="bar-cell"><div class="bar-fill" style="background:rgba(56,189,248,'+(row.blinds/100)+')"></div><span style="color:'+(row.blinds>0?"#38bdf8":"#475569")+'">'+row.blinds+'%</span></div></td>';
+    html+='<td class="action-cell">'+row.label+'</td>';
+    html+='</tr>';
+  });
+  html+='</tbody>';
+  el("timelineTable").innerHTML=html;
+}
+
+// ── Wire up all inputs ──
+["sSleep","sRecovery","sStrain","sStress","sPSO","sPW","sRSO","sRW","sCW"].forEach(function(id){
+  el(id).addEventListener("input",render);
+});
+el("cbOverride").addEventListener("change",render);
+
+// Handle resize for canvas redraw
+var resizeTimer;
+window.addEventListener("resize",function(){clearTimeout(resizeTimer);resizeTimer=setTimeout(render,100)});
+
+// Initial render
+render();
+</script>
+</body>
+</html>
