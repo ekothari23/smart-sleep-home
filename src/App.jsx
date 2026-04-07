@@ -1,4 +1,4 @@
-import SmartHomeSleepApp from "./SmartHomeSleepApp";
+import SmartHomeSleepApp from "./SmartHomeSleepApp.jsx";
 
 export default function App() {
   return <SmartHomeSleepApp />;
